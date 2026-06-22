@@ -80,6 +80,9 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
 ENV PATH="/home/claude/.cargo/bin:${PATH}"
 RUN cargo install cargo-watch
 
+# Install linux-mcp-server MCP tool
+RUN uv tool install linux-mcp-server
+
 # Claude Code version (empty = latest, or specific version like "1.0.0")
 ARG CLAUDE_VERSION=""
 
