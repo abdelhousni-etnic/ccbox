@@ -24,7 +24,7 @@ on:
 
 env:
   REGISTRY: quay.io
-  IMAGE_NAME: guimou/ccbox
+  IMAGE_NAME: housab01/guimou/ccbox
 
 jobs:
   build-and-push:
