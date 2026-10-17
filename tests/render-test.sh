@@ -36,7 +36,7 @@ WORKSPACE="${ROOT}/repos/demo"
 NPM_PREFIX="${ROOT}/npm-global"
 STUBS="${ROOT}/stubs"
 OUT="${ROOT}/out"
-mkdir -p "$FAKE_HOME" "$WORKSPACE" "$NPM_PREFIX" "$STUBS" "$OUT"
+mkdir -p "$FAKE_HOME" "$WORKSPACE" "$NPM_PREFIX" "$STUBS" "$OUT" "${ROOT}/repos/demo-worktrees"
 
 # Files the launchers detect on the host
 touch "${FAKE_HOME}/.gitconfig" "${FAKE_HOME}/.claude.json"
@@ -104,6 +104,9 @@ SCENARIOS=(
     "ccbox-safe-mode-args|ccbox|--safe-mode -- --version"
     "ccbox-no-github|ccbox|--no-github --claude-version 1.2.3"
     "ccbox-explicit|ccbox|--github-token ghp_explicit --npm-global ROOT/npm-global --local"
+    "ccbox-mount|ccbox|--mount ROOT/repos/demo-worktrees:/worktrees --mount=ROOT/npm-global:/extra:ro"
+    "!ccbox-mount-missing|ccbox|--mount ROOT/repos/nope:/worktrees"
+    "!ccbox-mount-relative|ccbox|--mount ROOT/repos/demo-worktrees:worktrees"
     "ocbox-default|ocbox|"
     "ocbox-all-opts|ocbox|--with-firewall --with-credentials --with-gcloud --with-gitconfig"
     "ocbox-args|ocbox|-- --version"
