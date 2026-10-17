@@ -41,6 +41,7 @@ The container image is automatically pulled from `quay.io/guimou/{ccbox,ocbox,qc
 | `--npm-global <dir>` | Explicit npm global prefix to mount (auto-detected otherwise) |
 | `--with-gcloud` | Mount `~/.config/gcloud` read-only (Vertex AI, opt-in) |
 | `--with-gitconfig` | Mount `~/.gitconfig` read-only (git identity, opt-in) |
+| `--mount <host>:<container>[:ro]` | Bind-mount an extra host directory at an absolute container path; repeatable (see [Extra mounts](#extra-mounts)) |
 | `--with-credentials` | Mount the harness credential file read-write (opt-in; see [Credentials](#credentials)) |
 | `--list-sessions` | List active sessions for the current project |
 | `--runtime <name>` | Container runtime: `podman` (default when installed) or `apptainer` (see [Runtimes](#runtimes)) |
@@ -62,7 +63,7 @@ The launchers can drive two container runtimes. The mounts, environment and isol
 | `--build` / `--build-base` | Supported | Not available (build with Podman or CI, then let the launcher convert) |
 | `--with-firewall` | Supported (Linux) | Refused: restrict egress at the pod or namespace level instead |
 | Clipboard, audio, npm-global mount | Wired when the desktop has them | Not applicable (no desktop) |
-| GitHub token, provider env vars, credential files, `--with-gcloud`, `--with-gitconfig` | Same on both | Same on both (env vars come from the pod environment, files from the pod's home directory) |
+| GitHub token, provider env vars, credential files, `--with-gcloud`, `--with-gitconfig`, `--mount` | Same on both | Same on both (env vars come from the pod environment, files from the pod's home directory) |
 | `--list-sessions` | `podman ps` | Marker files under `~/.codebox/sessions` (stale ones are pruned when listing) |
 
 Apptainer environment variables:
@@ -74,6 +75,17 @@ Apptainer environment variables:
 | `CODEBOX_SIF_DIR` | `$CODEBOX_STATE_DIR/sifs` | SIF store; can be shared by several pods |
 | `CODEBOX_SCRATCH_DIR` | unset | When set, a per-session directory under it is bound at `/tmp` inside the container, so large temporary writes go to disk instead of the RAM-backed writable overlay. Point it at a node-local volume. |
 | `APPTAINER_TMPDIR` / `APPTAINER_CACHEDIR` | Apptainer defaults | Where the image-to-SIF conversion unpacks layers. Must be node-local disk, not a network filesystem. |
+
+## Extra Mounts
+
+Only the project directory is mounted by default. When a workflow needs a second host directory, for example git worktrees kept outside the repository so that tools honouring `.gitignore` (such as the Claude Code LSP tool, which drops results in ignored paths) still see them, mount it explicitly:
+
+```bash
+mkdir -p ~/Dev/repos/my-project-worktrees
+ccbox --mount ~/Dev/repos/my-project-worktrees:/worktrees
+```
+
+`--mount HOST:CONTAINER[:ro]` is repeatable. The container path must be absolute, the host path must be an existing directory (symlinks are resolved, like the workspace), and `ro` is the only option. The mount is read-write unless `ro` is given and gets the same SELinux relabeling as the workspace. The launcher refuses to start on a missing directory or a malformed spec.
 
 ## Sessions and Isolation
 

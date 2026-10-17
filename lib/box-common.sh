@@ -310,6 +310,7 @@ show_help() {
     echo "  --github-token TOKEN     Use specific GitHub token instead of auto-detecting"
     echo "  --with-gcloud            Mount ~/.config/gcloud read-only (for Vertex AI)"
     echo "  --with-gitconfig         Mount ~/.gitconfig read-only (git identity and config)"
+    echo "  --mount HOST:CONTAINER[:ro]  Bind-mount an extra host directory (repeatable)"
     echo "  --list-sessions          List active sessions for this project"
     echo "  --shell                  Start an interactive bash shell instead of ${HARNESS_CLI} (same mounts; for troubleshooting)"
     echo "  --install                Show installation instructions"
@@ -851,6 +852,7 @@ box_main() {
     GITHUB_TOKEN=""
     WITH_GCLOUD=false
     WITH_GITCONFIG=false
+    EXTRA_MOUNTS=()
     LIST_SESSIONS=false
     OPEN_SHELL=false
     SHOW_INSTALL=false
@@ -944,6 +946,14 @@ box_main() {
                 WITH_GITCONFIG=true
                 shift
                 ;;
+            --mount)
+                EXTRA_MOUNTS+=("$2")
+                shift 2
+                ;;
+            --mount=*)
+                EXTRA_MOUNTS+=("${1#*=}")
+                shift
+                ;;
             --runtime)
                 RUNTIME_OPT="$2"
                 shift 2
@@ -1033,6 +1043,27 @@ box_main() {
     # Add optional mounts that may not exist on all systems
     add_optional_mount WITH_GCLOUD "${GOOGLE_CONFIG_DIR}/" "/home/coder/.config/gcloud" "ro"
     add_optional_mount WITH_GITCONFIG "${HOME}/.gitconfig" "/home/coder/.gitconfig" "ro"
+
+    # Extra host directories (--mount HOST:CONTAINER[:ro], repeatable): the
+    # host side is resolved like the workspace, so symlinked paths mount their
+    # real directory; the backend relabels it like any other project mount.
+    local extra_spec extra_host extra_container extra_opts
+    for extra_spec in "${EXTRA_MOUNTS[@]}"; do
+        IFS=: read -r extra_host extra_container extra_opts <<<"$extra_spec"
+        if [[ -z "$extra_host" || "$extra_container" != /* ]]; then
+            log_error "--mount expects HOST:CONTAINER[:ro] with an absolute container path, got '$extra_spec'"
+            exit 1
+        fi
+        if [[ -n "$extra_opts" && "$extra_opts" != ro ]]; then
+            log_error "--mount: unknown option '$extra_opts' in '$extra_spec' (only 'ro' is accepted)"
+            exit 1
+        fi
+        if [[ ! -d "$extra_host" ]]; then
+            log_error "--mount: host directory not found: $extra_host"
+            exit 1
+        fi
+        add_mount "$(cd -P "$extra_host" && pwd -P)" "$extra_container" "$extra_opts"
+    done
 
     # Linux-specific mounts and environment variables
     if [[ "$OS_TYPE" == "linux" ]]; then
